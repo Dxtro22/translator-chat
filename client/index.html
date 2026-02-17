@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Real-Time Chat</title>
+</head>
+<body>
+
+    <h1>Simple Chat</h1>
+
+    <!-- Room Input -->
+    <input id="roomInput" placeholder="Enter room name..." />
+    <button id="joinBtn">Join Room</button>
+
+    <hr>
+
+    <!-- Message Input -->
+    <input id="messageInput" placeholder="Type message..." />
+    <button id="sendBtn">Send</button>
+
+    <ul id="messages"></ul>
+
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script>
+
+    const socket = io();
+
+    const roomInput = document.getElementById("roomInput");
+    const joinBtn = document.getElementById("joinBtn");
+
+    const messageInput = document.getElementById("messageInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const messages = document.getElementById("messages");
+
+    let currentRoom = ""; // store current room
+
+    // Join room when button clicked
+    joinBtn.addEventListener("click", () => {
+
+    currentRoom = roomInput.value;
+
+    messages.innerHTML = ""; // CLEAR OLD MESSAGES
+
+    socket.emit("join-room", currentRoom);
+
+    alert("Joined room: " + currentRoom);
+});
+
+
+    // Send message
+    sendBtn.addEventListener("click", () => {
+
+        if (!currentRoom) {
+            alert("Join a room first!");
+            return;
+        }
+
+        const message = messageInput.value;
+
+        socket.emit("chat-message", {
+            room: currentRoom,
+            message: message
+        });
+
+        messageInput.value = "";
+    });
+
+    // Receive message
+    socket.on("chat-message", (msg) => {
+        const li = document.createElement("li");
+        li.textContent = msg;
+        messages.appendChild(li);
+    });
+
+    </script>
+
+</body>
+</html>
