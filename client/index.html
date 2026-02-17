@@ -1,78 +1,180 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Simple Real-Time Chat</title>
-</head>
-<body>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Translator Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
 
-    <h1>Simple Chat</h1>
-
-    <!-- Room Input -->
-    <input id="roomInput" placeholder="Enter room name..." />
-    <button id="joinBtn">Join Room</button>
-
-    <hr>
-
-    <!-- Message Input -->
-    <input id="messageInput" placeholder="Type message..." />
-    <button id="sendBtn">Send</button>
-
-    <ul id="messages"></ul>
-
-    <script src="/socket.io/socket.io.js"></script>
-
-    <script>
-
-    const socket = io();
-
-    const roomInput = document.getElementById("roomInput");
-    const joinBtn = document.getElementById("joinBtn");
-
-    const messageInput = document.getElementById("messageInput");
-    const sendBtn = document.getElementById("sendBtn");
-    const messages = document.getElementById("messages");
-
-    let currentRoom = ""; // store current room
-
-    // Join room when button clicked
-    joinBtn.addEventListener("click", () => {
-
-    currentRoom = roomInput.value;
-
-    messages.innerHTML = ""; // CLEAR OLD MESSAGES
-
-    socket.emit("join-room", currentRoom);
-
-    alert("Joined room: " + currentRoom);
-});
-
-
-    // Send message
-    sendBtn.addEventListener("click", () => {
-
-        if (!currentRoom) {
-            alert("Join a room first!");
-            return;
+    <style>
+        /* CSS for the Red Notification Badge */
+        .notification-badge {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background-color: #ed4245; /* Discord Red */
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 50px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            display: none; /* Hidden by default */
         }
 
-        const message = messageInput.value;
+        /* Ensure button handles absolute positioning of the badge */
+        .room-btn {
+            position: relative; 
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex overflow-hidden bg-gray-900">
 
-        socket.emit("chat-message", {
-            room: currentRoom,
-            message: message
-        });
+    <div id="authScreen" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-95 backdrop-blur-sm">
+        <div class="bg-[#2f3136] p-8 rounded shadow-2xl w-full max-w-md border border-gray-800 relative">
+            
+            <div class="text-center mb-6">
+                <i class="fas fa-language text-4xl text-[#5865f2] mb-2"></i>
+                <h2 id="authTitle" class="text-2xl font-bold text-white">Welcome Back!</h2>
+                <p id="authSubtitle" class="text-gray-400 text-sm">We're so excited to see you again!</p>
+            </div>
 
-        messageInput.value = "";
-    });
+            <div id="authError" class="hidden bg-red-500/10 border border-red-500 text-red-200 text-sm p-2 rounded mb-4 text-center"></div>
 
-    // Receive message
-    socket.on("chat-message", (msg) => {
-        const li = document.createElement("li");
-        li.textContent = msg;
-        messages.appendChild(li);
-    });
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-[#8e9297] uppercase mb-1">Email</label>
+                    <input type="email" id="loginEmail" class="w-full bg-[#202225] text-white p-2.5 rounded border border-transparent focus:border-[#5865f2] outline-none transition" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#8e9297] uppercase mb-1">Password</label>
+                    <input type="password" id="loginPass" class="w-full bg-[#202225] text-white p-2.5 rounded border border-transparent focus:border-[#5865f2] outline-none transition" required>
+                </div>
+                <button type="submit" class="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white font-bold py-2.5 rounded transition">Log In</button>
+            </form>
 
-    </script>
+            <form id="registerForm" class="space-y-4 hidden">
+                <div>
+                    <label class="block text-xs font-bold text-[#8e9297] uppercase mb-1">Email</label>
+                    <input type="email" id="regEmail" class="w-full bg-[#202225] text-white p-2.5 rounded border border-transparent focus:border-[#5865f2] outline-none transition" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#8e9297] uppercase mb-1">Username</label>
+                    <input type="text" id="regName" class="w-full bg-[#202225] text-white p-2.5 rounded border border-transparent focus:border-[#5865f2] outline-none transition" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-[#8e9297] uppercase mb-1">Password</label>
+                    <input type="password" id="regPass" class="w-full bg-[#202225] text-white p-2.5 rounded border border-transparent focus:border-[#5865f2] outline-none transition" required>
+                </div>
+                <button type="submit" class="w-full bg-[#5865f2] hover:bg-[#4752c4] text-white font-bold py-2.5 rounded transition">Create Account</button>
+            </form>
 
+            <div class="mt-4 text-sm text-[#b9bbbe]">
+                <span id="toggleText">Need an account?</span>
+                <span id="toggleBtn" class="text-[#00aff4] hover:underline cursor-pointer ml-1">Register</span>
+            </div>
+
+            <div class="flex items-center gap-2 my-4">
+                <div class="h-px bg-gray-600 flex-1"></div>
+                <span class="text-xs text-gray-500 font-bold">OR</span>
+                <div class="h-px bg-gray-600 flex-1"></div>
+            </div>
+
+            <button id="googleLoginBtn" class="w-full bg-white text-gray-900 font-bold py-2.5 rounded hover:bg-gray-200 transition flex items-center justify-center gap-2">
+                <i class="fab fa-google text-red-500"></i> Continue with Google
+            </button>
+        </div>
+    </div>
+
+    <div id="appUI" class="flex w-full h-full hidden">
+        
+        <nav class="w-[72px] bg-[#202225] flex flex-col items-center py-3 space-y-2 overflow-y-auto hide-scrollbar">
+            <div class="w-12 h-12 bg-[#5865f2] rounded-[15px] flex items-center justify-center text-white cursor-pointer hover:rounded-[10px] transition-all">
+                <i class="fas fa-language text-2xl"></i>
+            </div>
+            <div class="w-8 h-[2px] bg-[#2f3136] rounded-lg mx-auto"></div>
+        </nav>
+
+        <aside class="w-60 bg-[#2f3136] flex flex-col">
+            <div class="h-12 shadow-sm flex items-center px-4 font-bold text-white border-b border-[#202225]">
+                Translator Chat
+            </div>
+            
+            <div class="flex-1 p-2 space-y-1 overflow-y-auto">
+                <div class="text-xs font-bold text-[#8e9297] uppercase px-2 pt-4 pb-1">Text Channels</div>
+                
+                <button id="btn-general" onclick="joinRoom('general')" class="room-btn w-full text-left px-2 py-1.5 rounded text-[#8e9297] hover:bg-[#34373c] hover:text-[#dcddde] flex items-center gap-1.5 group">
+                    <i class="fas fa-hashtag text-lg text-[#72767d]"></i> general
+                    <span id="badge-general" class="notification-badge">NEW</span>
+                </button>
+
+                <button id="btn-gaming" onclick="joinRoom('gaming')" class="room-btn w-full text-left px-2 py-1.5 rounded text-[#8e9297] hover:bg-[#34373c] hover:text-[#dcddde] flex items-center gap-1.5 group">
+                    <i class="fas fa-hashtag text-lg text-[#72767d]"></i> gaming
+                    <span id="badge-gaming" class="notification-badge">NEW</span>
+                </button>
+                
+                <button id="btn-devs" onclick="joinRoom('devs')" class="room-btn w-full text-left px-2 py-1.5 rounded text-[#8e9297] hover:bg-[#34373c] hover:text-[#dcddde] flex items-center gap-1.5 group">
+                    <i class="fas fa-hashtag text-lg text-[#72767d]"></i> devs
+                    <span id="badge-devs" class="notification-badge">NEW</span>
+                </button>
+                
+                <div class="mt-6 px-2">
+                    <div class="text-xs font-bold text-[#8e9297] uppercase mb-2">Join Private Room</div>
+                    <div class="flex bg-[#202225] rounded p-1">
+                        <input id="customRoomInput" placeholder="room-name" class="bg-transparent text-[#dcddde] text-sm w-full outline-none px-1">
+                        <button id="joinCustomBtn" class="text-[#b9bbbe] hover:text-white px-2"><i class="fas fa-arrow-right"></i></button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-[#292b2f] p-2 flex items-center gap-2">
+                <img id="userAvatar" src="" class="w-8 h-8 rounded-full bg-gray-600">
+                <div class="flex-1 min-w-0">
+                    <div id="userName" class="text-sm font-bold text-white truncate">Guest</div>
+                    <div class="text-xs text-[#b9bbbe]">Online</div>
+                </div>
+                <button id="logoutBtn" class="w-8 h-8 rounded hover:bg-[#36393f] text-[#b9bbbe] hover:text-red-500 flex items-center justify-center transition" title="Logout">
+                    <i class="fas fa-sign-out-alt text-xs"></i>
+                </button>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col bg-[#36393f] min-w-0">
+            <header class="h-12 shadow-sm flex items-center justify-between px-4 border-b border-[#202225]">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-hashtag text-[#72767d]"></i>
+                    <h3 id="currentRoomName" class="font-bold text-white">general</h3>
+                    <div class="w-px h-6 bg-[#4f545c] mx-2 hidden sm:block"></div>
+                    <span class="text-xs text-[#b9bbbe] hidden sm:block">Real-time AI Translation</span>
+                </div>
+                <div class="flex items-center gap-2 bg-[#202225] rounded px-2 py-1">
+                    <i class="fas fa-globe text-[#b9bbbe] text-xs"></i>
+                    <select id="langInput" class="bg-transparent text-[#dcddde] text-sm outline-none cursor-pointer">
+                        <option value="en">English</option>
+                        <option value="hi">Hindi (हिंदी)</option>
+                        <option value="es">Spanish (Español)</option>
+                        <option value="fr">French (Français)</option>
+                        <option value="zh-CN">Chinese (中文)</option>
+                        <option value="ar">Arabic (العربية)</option>
+                    </select>
+                </div>
+            </header>
+
+            <div id="messages" class="flex-1 overflow-y-auto p-4 space-y-1"></div>
+
+            <div class="px-4 pb-6 pt-2">
+                <div class="bg-[#40444b] rounded-lg flex items-center px-4 py-2.5 gap-4">
+                    <button class="text-[#b9bbbe] hover:text-[#dcddde]"><i class="fas fa-plus-circle text-xl"></i></button>
+                    <input id="messageInput" type="text" placeholder="Message" class="bg-transparent flex-1 text-[#dcddde] placeholder-[#72767d] outline-none h-full">
+                    <button id="sendBtn" class="text-[#b9bbbe] hover:text-[#5865f2] transition"><i class="fas fa-paper-plane text-xl"></i></button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script type="module" src="script.js"></script>
 </body>
 </html>
